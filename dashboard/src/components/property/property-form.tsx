@@ -253,7 +253,7 @@ const PropertyForm = () => {
           {/* <HorizontalLabel label="House No & Street " /> */}
 
           <Input
-            type="number"
+            type="text"
             label="House No & Street "
             name="houseNoStreet"
             placeholder="House No & Street"
