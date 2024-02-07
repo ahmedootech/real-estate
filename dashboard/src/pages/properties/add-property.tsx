@@ -12,7 +12,7 @@ const AddProperty = () => {
       </PageHeader>
       <div className="container-fluid g-0">
         <div className="row">
-          <div className="col-lg-8">
+          <div className="col-lg-12">
             <div className="">
               <PropertyForm />
             </div>

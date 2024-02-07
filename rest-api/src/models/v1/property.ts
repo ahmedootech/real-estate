@@ -16,6 +16,29 @@ interface PropertyAttr {
   toilets: number;
   sittingRooms: number;
   agent: string;
+  imageURLs: { path: string }[];
+  neighborhood: {
+    overview: string;
+    amenities: {
+      parks: string;
+      schools: string;
+      shopping: string;
+      restaurants: string;
+      entertainment: string;
+    };
+    transportation: {
+      publicTransit: string;
+      majorHighways: string[];
+    };
+    safety: {
+      crimeRate: string;
+      policeFireStations: string;
+    };
+    community: {
+      events: string[];
+      communityCenters: string[];
+    };
+  };
 }
 
 interface PropertyDoc extends PropertyAttr, mongoose.Document {}
@@ -42,18 +65,22 @@ const propertySchema = new mongoose.Schema(
       state: {
         type: String,
         required: true,
+        ref: 'State',
       },
       lga: {
         type: String,
         required: true,
+        ref: 'Lga',
       },
       ward: {
         type: String,
         required: true,
+        ref: 'Ward',
       },
       area: {
         type: String,
         required: true,
+        ref: 'Area',
       },
       houseNoStreet: {
         type: String,
@@ -77,6 +104,11 @@ const propertySchema = new mongoose.Schema(
       ref: 'Staff',
       required: true,
     },
+    status: {
+      type: String,
+      default: 'Available',
+    },
+    imageURLs: [{ path: String }],
   },
   {
     timestamps: true,

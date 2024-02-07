@@ -17,7 +17,7 @@ const app = express();
 app.use(cors());
 app.use(helmet());
 app.use(json());
-
+app.use(express.static('public'));
 app.use('/api/v1', v1Routes);
 
 app.all('*', async (req, res) => {

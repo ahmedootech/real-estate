@@ -26,31 +26,32 @@ const PropertyList = () => {
           <table className="table table-sm">
             <thead>
               <tr>
-                <th>Staff Name</th>
-                <th>Gender</th>
-                <th>Phone</th>
-                <th>Role</th>
-                <th>Username</th>
+                <th>Title</th>
+                <th>Price</th>
+                <th>Bedrooms</th>
+                <th>Toilets</th>
+                <th>Sitting rooms</th>
                 <th>Address</th>
                 <th>Status</th>
                 <th>Options</th>
               </tr>
             </thead>
             <tbody>
-              {properties.map((staff, index) => (
+              {properties.map((property, index) => (
                 <tr key={index} className="align-middle">
-                  <td className="text-nowrap">
-                    <p className="py-0 my-0">{`${staff.firstName} ${staff.lastName}`}</p>
-                  </td>
-                  <td>{staff.gender}</td>
-                  <td>{staff.phone}</td>
-                  <td>{staff.role}</td>
-                  <td>{staff.username}</td>
-                  <td className="text-nowrap">{staff.address}</td>
-                  <td>{staff.status}</td>
+                  <td className="text-nowrap">{property.title}</td>
+                  <td>{property.price}</td>
+                  <td>{property.bedrooms}</td>
+                  <td>{property.toilets}</td>
+                  <td>{property.sittingRooms}</td>
+                  <td
+                    className="text-nowrap"
+                    title={`${property.address.houseNoStreet}, ${property.address.area.name}, ${property.address.ward.name}, ${property.address.lga.name}, ${property.address.state.name}`}
+                  >{`${property.address.area.name}, ${property.address.ward.name}, ${property.address.lga.name}, ${property.address.state.name} `}</td>
+                  <td>{property.status}</td>
                   <td className="text-nowrap">
                     <Link
-                      href="/"
+                      href={`/properties/${property.id}`}
                       className="btn bg-success py-0 px-1  bg-opacity-75 text-white"
                       title="Provide Service"
                     >
