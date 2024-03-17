@@ -32,9 +32,9 @@ router.post(
   ],
   [
     validateRequest,
-    currentUser,
-    requireAuth,
-    authorization(['Manager', 'Admin']),
+    // currentUser,
+    // requireAuth,
+    // authorization(['Manager', 'Admin']),
   ],
   async (req: Request, res: Response) => {
     const { firstName, lastName, gender, phone, address, username, password } =

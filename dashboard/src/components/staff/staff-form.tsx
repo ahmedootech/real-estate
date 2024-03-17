@@ -5,7 +5,7 @@ import SubmitButton from '../form-controls/submit-button';
 import HorizontalLabel from '../form-controls/horizontal-label';
 import Input from '../form-controls/input';
 import Radio from '../form-controls/radio';
-import { apiV1 } from '../../utils/axios-instance';
+import { apiV1, getApiV1Instance } from '../../utils/axios-instance';
 import { toast } from 'react-toastify';
 import { handleYupErrors } from '../../utils/yup-form-helpers';
 import { useEffect, useState } from 'react';
@@ -21,7 +21,7 @@ const defaultValues = {
   username: '',
   password: '12345',
 };
-const StaffForm = () => {
+const StaffForm = ({ staff = null, updateList = () => {} }) => {
   const [roles, setRoles] = useState([]);
   useEffect(() => {
     const getData = async () => {
@@ -33,6 +33,20 @@ const StaffForm = () => {
       }
     };
     getData();
+  }, []);
+
+  useEffect(() => {
+    if (staff) {
+      methods.reset({
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        gender: staff.gender,
+        phone: staff.phone,
+        address: staff.address,
+        role: staff.role,
+        username: staff.username,
+      });
+    }
   }, []);
 
   const staffSchema = yup.object().shape({
@@ -54,9 +68,15 @@ const StaffForm = () => {
 
   const staffSubmitHandler = async (data: any) => {
     try {
-      const res = await apiV1.post('/auth/staff/register', data);
-      methods.reset(defaultValues);
-      toast.success('Staff created successfully');
+      if (staff) {
+        await getApiV1Instance().put(`/staffs/${staff.id}`, data);
+        toast.success('Staff updated successfully');
+      } else {
+        const res = await apiV1.post('/auth/staff/register', data);
+        toast.success('Staff created successfully');
+        methods.reset(defaultValues);
+      }
+      updateList();
     } catch (err) {
       console.log(err);
       const errors = err.response.data.errors;
@@ -192,7 +212,10 @@ const StaffForm = () => {
       </div>
 
       <div className="d-flex justify-content-end">
-        <SubmitButton label="Add Staff" type="submit" />
+        <SubmitButton
+          label={staff ? 'Update Staff' : 'Add Staff'}
+          type="submit"
+        />
       </div>
     </form>
   );

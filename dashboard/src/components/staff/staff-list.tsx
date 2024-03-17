@@ -3,19 +3,27 @@ import Link from 'next/link';
 import { apiV1 } from '../../utils/axios-instance';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
+import { Modal } from 'react-bootstrap';
+import StaffForm from './staff-form';
 
 const StaffList = () => {
   const [staffs, setStaffs] = useState([]);
+  const [selectedStaff, setSelectedStaff] = useState(null);
+  const [show, setShow] = useState(false);
+
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
+
+  const getData = async () => {
+    try {
+      const res = await apiV1.get('/staffs');
+      setStaffs(res.data);
+      console.log(res);
+    } catch (err) {
+      console.log(err);
+    }
+  };
   useEffect(() => {
-    const getData = async () => {
-      try {
-        const res = await apiV1.get('/staffs');
-        setStaffs(res.data);
-        console.log(res);
-      } catch (err) {
-        console.log(err);
-      }
-    };
     getData();
   }, []);
   return (
@@ -55,13 +63,16 @@ const StaffList = () => {
                     >
                       <VisibilityIcon />
                     </Link>
-                    <Link
-                      href="/"
+                    <button
                       className="btn btn-warning text-white py-0 px-1 mx-1"
-                      title="Make appointment"
+                      title="Edit Staff"
+                      onClick={() => {
+                        setSelectedStaff(staff);
+                        handleShow();
+                      }}
                     >
                       <EditIcon />
-                    </Link>
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -71,6 +82,15 @@ const StaffList = () => {
       ) : (
         <p>No Record Found</p>
       )}
+
+      <Modal show={show} onHide={handleClose} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Update Category</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="py-4 pb-5">
+          <StaffForm staff={selectedStaff} updateList={getData} />
+        </Modal.Body>
+      </Modal>
     </>
   );
 };

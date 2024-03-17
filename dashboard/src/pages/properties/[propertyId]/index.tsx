@@ -10,11 +10,41 @@ import Image from 'next/image';
 import BedIcon from '@mui/icons-material/LocalHotel';
 import BathtubIcon from '@mui/icons-material/Bathtub';
 import ChairIcon from '@mui/icons-material/Chair';
+import PlaceIcon from '@mui/icons-material/Place';
 import { prepareImageUrl } from '../../../utils/images';
+import Button from 'react-bootstrap/Button';
+import Modal from 'react-bootstrap/Modal';
+import NeighborhoodForm from '../../../components/property/neighborhood-form';
+import ARComponent from '../../../components/ar-model/ar-component';
+import { Canvas } from '@react-three/fiber';
+import { Environment, OrbitControls, Stage } from '@react-three/drei';
+import React, { Suspense, useRef } from 'react';
+import GLTFModelLoader from '../../../components/ar-model/r3f-gltf-loader';
+import Model from '../../../components/ar-model/r3f-gltf-loader';
 
-const PropertyDetail = ({ property }) => {
+const PropertyDetail = ({ propertyInfo }) => {
+  console.log(propertyInfo);
   const router = useRouter();
+  const { propertyId } = router.query;
+  const ref = useRef<any>();
+
+  const [property, setProperty] = useState(propertyInfo);
   const [index, setIndex] = useState(0);
+  const [show, setShow] = useState(false);
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
+
+  const [showAR, setShowAR] = useState(false);
+  const handleCloseAR = () => setShowAR(false);
+  const handleShowAR = () => setShowAR(true);
+  const getProperty = async () => {
+    try {
+      const res = await apiV1.get(`/properties/${propertyId}`);
+      setProperty(res.data);
+    } catch (err) {
+      toast.error('Something went wrong');
+    }
+  };
 
   const handleSelect = (selectedIndex, e) => {
     setIndex(selectedIndex);
@@ -52,7 +82,9 @@ const PropertyDetail = ({ property }) => {
 
             <div className="top">
               <p>{property.title}</p>
-              <h5 className="fw-bold text-primary">Price: &#x20A6;250,000</h5>
+              <h5 className="fw-bold text-primary">
+                Price: &#x20A6;{Number(property.price).toLocaleString()}
+              </h5>
               <p className="fs-6 text-nowrap">
                 <span>
                   <BedIcon /> {property.bedrooms}
@@ -64,9 +96,12 @@ const PropertyDetail = ({ property }) => {
                   <ChairIcon /> {property.sittingRooms}
                 </span>
               </p>
+              <div>
+                <p>Category: {property.category.name}</p>
+              </div>
 
-              <address>
-                <i className="mdi mdi-map-marker"></i>{' '}
+              <address className="d-flex align-items-end">
+                <PlaceIcon />{' '}
                 {`${String(
                   property.address.houseNoStreet
                 ).toLocaleUpperCase()}, ${property.address.area.name}, ${
@@ -76,35 +111,112 @@ const PropertyDetail = ({ property }) => {
                 }`}
               </address>
               <p className="form-text">{property.description}</p>
+              {property.arModelUrl && (
+                <button className="btn btn-secondary" onClick={handleShowAR}>
+                  View AR
+                </button>
+              )}
             </div>
           </div>
           <div className="col-lg-4">
             <h5>Neighborhood Information</h5>
-            <p>
-              Overview: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-              Sed vitae finibus justo.
-            </p>
+            {property.neighborhood ? (
+              <>
+                <p>Overview: {property.neighborhood.overview}</p>
 
-            <h6>Amenities</h6>
-            <ul>
-              <li>Parks: Park A, Park B</li>
-              <li>Schools: School X, School Y</li>
-              <li>Shopping: Mall A, Grocery Store B</li>
-              <li>Restaurants: Restaurant 1, Restaurant 2</li>
-              <li>Entertainment: Theater A, Museum B</li>
-            </ul>
+                <h6>Amenities</h6>
+                <ul>
+                  <li>Parks: {property.neighborhood.amenities.parks}</li>
+                  <li>Schools: {property.neighborhood.amenities.schools}</li>
+                  <li>Shopping:{property.neighborhood.amenities.shopping}</li>
+                  <li>
+                    Restaurants: {property.neighborhood.amenities.restaurants}
+                  </li>
+                  <li>
+                    Entertainment:{' '}
+                    {property.neighborhood.amenities.entertainment}
+                  </li>
+                </ul>
 
-            <h6>Transportation</h6>
-            <p>Public Transit: Bus Lines 1, 2, 3</p>
-            <p>Major Highways: Highway A, Highway B</p>
+                <h6>Transportation</h6>
+                <p>
+                  Public Transit:{' '}
+                  {property.neighborhood.transportation.publicTransit}
+                </p>
+                <p>
+                  Major Highways:{' '}
+                  {property.neighborhood.transportation.majorHighway}
+                </p>
 
-            <h6>Safety</h6>
-            <p>Crime Rate: Low</p>
-            <p>Police Stations: Station A, Station B</p>
-            <p>Fire Stations: Fire Station X, Fire Station Y</p>
+                <h6>Safety</h6>
+                <p>Crime Rate: {property.neighborhood.safety.crimeRate}</p>
+                <p>
+                  Police Stations: {property.neighborhood.safety.policeStations}
+                </p>
+                <p>
+                  Fire Stations: {property.neighborhood.safety.fireStations}
+                </p>
+              </>
+            ) : (
+              <p>No Neighborhood Information found</p>
+            )}
+            <button className="btn btn-dark" onClick={handleShow}>
+              {property.neighborhood
+                ? 'Update Neighborhood Info'
+                : 'Add Neighborhood Info'}
+            </button>
           </div>
         </div>
       </div>
+      <Modal show={show} onHide={handleClose} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Neighborhood Information</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="py-3 px-2 pb-4">
+            <NeighborhoodForm
+              propertyId={property.id}
+              reloadData={getProperty}
+              closeModal={handleClose}
+              neighborhoodInfo={property.neighborhood}
+            />
+          </div>
+        </Modal.Body>
+      </Modal>
+
+      <Modal show={showAR} onHide={handleCloseAR} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Property AR</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div
+            className="d-flex align-items-center py-3 px-2 pb-4"
+            style={{ minHeight: '500px' }}
+          >
+            <Canvas frameloop="demand" style={{ height: '500px' }}>
+              <ambientLight />
+              <pointLight position={[10, 10, 10]} />
+              <OrbitControls />
+              <Model
+                url={`${process.env.API_BASE_URL}/${prepareImageUrl(
+                  property.arModelUrl.path
+                )}`}
+              />
+            </Canvas>
+            {/* <Canvas>
+              <Suspense fallback={null}>
+                <GLTFModelLoader
+                  url={`${process.env.API_BASE_URL}/${prepareImageUrl(
+                    property.arModelUrl.path
+                  )}`}
+                />
+                <OrbitControls />
+                <Environment preset="sunset" background />
+              </Suspense>
+            </Canvas> */}
+          </div>
+        </Modal.Body>
+      </Modal>
     </>
   );
 };
@@ -113,7 +225,7 @@ export default PropertyDetail;
 
 export const getServerSideProps = async (context: NextPageContext) => {
   const cookies = context.req?.cookies;
-  console.log(cookies);
+
   const { query } = context;
   const propertyId = query.propertyId;
 
@@ -131,7 +243,7 @@ export const getServerSideProps = async (context: NextPageContext) => {
     });
     return {
       props: {
-        property: propertyRes.data,
+        propertyInfo: propertyRes.data,
       },
     };
   } catch (err) {

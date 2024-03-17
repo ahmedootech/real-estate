@@ -14,6 +14,7 @@ import { Staff } from './models/v1/staff';
 dotenv.config();
 const app = express();
 
+app.set('trust proxy', true);
 app.use(cors());
 app.use(helmet());
 app.use(json());

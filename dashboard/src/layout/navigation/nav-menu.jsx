@@ -5,12 +5,17 @@ import { useRouter } from 'next/router';
 import Cookies from 'js-cookie';
 import { useCompany } from '../../hooks/useCompany';
 import Logo from '../logo';
+import { useEffect, useState } from 'react';
 
 const NavMenu = () => {
+  const [navItems, setNavItems] = useState([]);
   const router = useRouter();
-  const navItems = navigation();
   const company = useCompany();
 
+  useEffect(() => {
+    const navItems = navigation();
+    setNavItems(navItems);
+  }, []);
   const handleLogOut = () => {
     Cookies.remove('token');
     Cookies.remove('user');
@@ -26,7 +31,7 @@ const NavMenu = () => {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
-            <Link href="/" passHref legacyBehavior>
+            <Link href="/dashboard" passHref legacyBehavior>
               <Nav.Link as="a" className="fw-bold">
                 DASHBOARD
               </Nav.Link>

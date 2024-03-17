@@ -17,7 +17,7 @@ const Select: React.FC<SelectProps> = ({
 }) => {
   // const { control } = useFormContext();
   return (
-    <div className="py-1">
+    <div className="py-2">
       {label && (
         <label htmlFor="" className="form-label fw-bold">
           {label}:

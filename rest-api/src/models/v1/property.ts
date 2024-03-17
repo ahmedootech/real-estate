@@ -4,6 +4,8 @@ import { transformDocument } from '../../services/mongoose-utils';
 interface PropertyAttr {
   title: string;
   description: string;
+  category: string;
+  type: string;
   price: number;
   address: {
     state: string;
@@ -16,8 +18,9 @@ interface PropertyAttr {
   toilets: number;
   sittingRooms: number;
   agent: string;
-  imageURLs: { path: string }[];
-  neighborhood: {
+  imageURLs?: { path: string }[];
+  arModelUrl?: { path: string };
+  neighborhood?: {
     overview: string;
     amenities: {
       parks: string;
@@ -32,11 +35,8 @@ interface PropertyAttr {
     };
     safety: {
       crimeRate: string;
-      policeFireStations: string;
-    };
-    community: {
-      events: string[];
-      communityCenters: string[];
+      policeStations: string;
+      fireStations: string;
     };
   };
 }
@@ -50,6 +50,15 @@ interface PropertyModel extends mongoose.Model<PropertyDoc> {
 const propertySchema = new mongoose.Schema(
   {
     title: {
+      type: String,
+      required: true,
+    },
+    category: {
+      type: String,
+      required: true,
+      ref: 'Category',
+    },
+    type: {
       type: String,
       required: true,
     },
@@ -108,7 +117,29 @@ const propertySchema = new mongoose.Schema(
       type: String,
       default: 'Available',
     },
+    neighborhood: {
+      overview: {
+        type: String,
+      },
+      amenities: {
+        parks: String,
+        schools: String,
+        shopping: String,
+        restaurants: String,
+        entertainment: String,
+      },
+      transportation: {
+        publicTransit: String,
+        majorHighways: String,
+      },
+      safety: {
+        crimeRate: String,
+        policeStations: String,
+        fireStations: String,
+      },
+    },
     imageURLs: [{ path: String }],
+    arModelUrl: { path: String },
   },
   {
     timestamps: true,

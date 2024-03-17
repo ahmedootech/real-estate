@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiV1 } from '../../utils/axios-instance';
+import { apiV1, getApiV1Instance } from '../../utils/axios-instance';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 
@@ -9,7 +9,7 @@ const PropertyList = () => {
   useEffect(() => {
     const getData = async () => {
       try {
-        const res = await apiV1.get('/properties');
+        const res = await getApiV1Instance().get('/properties');
         setProperties(res.data);
         console.log(res);
       } catch (err) {
@@ -40,7 +40,7 @@ const PropertyList = () => {
               {properties.map((property, index) => (
                 <tr key={index} className="align-middle">
                   <td className="text-nowrap">{property.title}</td>
-                  <td>{property.price}</td>
+                  <td>{Number(property.price).toLocaleString()}</td>
                   <td>{property.bedrooms}</td>
                   <td>{property.toilets}</td>
                   <td>{property.sittingRooms}</td>
@@ -58,9 +58,9 @@ const PropertyList = () => {
                       <VisibilityIcon />
                     </Link>
                     <Link
-                      href="/"
+                      href={`/properties/${property.id}/update`}
                       className="btn btn-warning text-white py-0 px-1 mx-1"
-                      title="Make appointment"
+                      title="Edit Property"
                     >
                       <EditIcon />
                     </Link>

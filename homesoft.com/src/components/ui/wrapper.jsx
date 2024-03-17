@@ -13,7 +13,9 @@ const Wrapper = (props) => {
       {props.withLink && (
         <div className="d-flex justify-content-center py-4">
           <Link href={props.linkURL} passHref legacyBehavior>
-            <a className="btn btn-primary py-3 px-5">{props.linkLabel}</a>
+            <a className={`btn btn-${props.btnColor || 'primary'} py-3 px-5`}>
+              {props.linkLabel}
+            </a>
           </Link>
         </div>
       )}

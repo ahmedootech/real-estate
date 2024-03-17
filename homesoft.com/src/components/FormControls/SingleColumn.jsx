@@ -1,16 +1,16 @@
-const SingleColumn = ({ title, children }) => {
+const SingleColumn = ({ title, children, className = '' }) => {
   return (
     <div className="w-100 position-relative">
-      <button
-        className="btn btn-outline-light border-0 text-dark shadow-none h-100 w-100 text-start"
-        type="button"
+      <div
+        className="py-2 px-3 border-0 text-dark shadow-none h-100 w-100 text-start"
+        // type="div"
         title={title}
       >
-        <div className="">
+        <div>
           <h6 className="m-0 p-0">{title}</h6>
-          {children}
+          <div className={className || ''}>{children}</div>
         </div>
-      </button>
+      </div>
     </div>
   );
 };

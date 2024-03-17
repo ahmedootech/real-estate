@@ -5,13 +5,14 @@ import SubmitButton from '../form-controls/submit-button';
 import HorizontalLabel from '../form-controls/horizontal-label';
 import Input from '../form-controls/input';
 import Radio from '../form-controls/radio';
-import { apiV1 } from '../../utils/axios-instance';
+import { apiV1, getApiV1Instance } from '../../utils/axios-instance';
 import { toast } from 'react-toastify';
 import { handleYupErrors } from '../../utils/yup-form-helpers';
 import TextArea from '../form-controls/textarea';
 import { useEffect, useState } from 'react';
 import Select from '../form-controls/select';
 import ClearIcon from '@mui/icons-material/Clear';
+import { prepareImageUrl } from '../../utils/images';
 
 const defaultValues = {
   title: '',
@@ -24,12 +25,17 @@ const defaultValues = {
   lga: '',
   ward: '',
   area: '',
+  category: '',
+  type: '',
   houseNoStreet: '',
   images: [''],
+  arModel: '',
 };
 
 const FILE_SIZE = 1024 * 1024 * 5;
-const PropertyForm = () => {
+const FILE_SIZE_LIMIT = 1024 * 1024 * 50; // AR Model
+const PropertyForm = ({ propertyInfo = null, update = false }) => {
+  const [categories, setCategories] = useState([]);
   const [states, setStates] = useState([]);
   const [selectedState, setSelectedState] = useState(null);
   const [lgas, setLgas] = useState([]);
@@ -40,13 +46,50 @@ const PropertyForm = () => {
   const [selectedArea, setSelectedArea] = useState(null);
 
   const [imageFields, setImageFields] = useState(['images[0]']);
+  const [arModelFile, setArModelFile] = useState(null);
 
   useEffect(() => {
     const getData = async () => {
       const statesRes = await apiV1.get('/location/states');
+      const categoriesRes = await getApiV1Instance().get('/categories');
+      setCategories(categoriesRes.data);
       setStates(statesRes.data);
     };
     getData();
+  }, []);
+
+  useEffect(() => {
+    if (propertyInfo) {
+      console.log(propertyInfo);
+      const propertyValues = {
+        title: propertyInfo.title,
+        description: propertyInfo.description,
+        price: propertyInfo.price,
+        bedrooms: propertyInfo.bedrooms,
+        toilets: propertyInfo.toilets,
+        sittingRooms: propertyInfo.sittingRooms,
+        state: JSON.stringify(propertyInfo.address.state),
+        lga: JSON.stringify(propertyInfo.address.lga),
+        ward: JSON.stringify(propertyInfo.address.ward),
+        area: JSON.stringify(propertyInfo.address.area),
+        houseNoStreet: propertyInfo.address.houseNoStreet,
+        category: propertyInfo.category.id,
+        type: propertyInfo.type,
+      };
+
+      methods.reset(propertyValues);
+      setSelectedState(JSON.stringify(propertyInfo.address.state));
+      setSelectedLga(JSON.stringify(propertyInfo.address.lga));
+      setSelectedWard(JSON.stringify(propertyInfo.address.ward));
+      setSelectedArea(JSON.stringify(propertyInfo.address.area));
+
+      // methods.setValue(
+      //   'imagePreview[0]',
+      //   process.env.API_BASE_URL +
+      //     '/' +
+      //     prepareImageUrl(propertyInfo.imageURLs[0]?.path)
+      // );
+    }
   }, []);
 
   useEffect(() => {
@@ -82,6 +125,8 @@ const PropertyForm = () => {
   const propertySchema = yup.object().shape({
     title: yup.string().required('property title is required'),
     description: yup.string().required('property description is required'),
+    category: yup.string().required('category not selected'),
+    type: yup.string().required('type not selected'),
     price: yup
       .number()
       .typeError('only numbers are allowed')
@@ -128,15 +173,43 @@ const PropertyForm = () => {
           })
       )
       .test('atLeastOneImage', 'At least one image is required', (value) => {
+        if (update) return true;
         return value && value.length >= 1;
       }),
+    arModel: yup
+      .mixed()
+      .test(
+        'fileType',
+        'Invalid file type. Only GLTF or OBJ files are allowed.',
+        (value: any) => {
+          if (!value) return true;
+          return [
+            'model/gltf+json',
+            'model/gltf-binary',
+            'model/vnd.gltf+json',
+            'model/vnd.gltf-binary',
+            '',
+          ].includes(value.type);
+        }
+      )
+      .test(
+        'fileSize',
+        'File size is too large. Maximum allowed size is 50MB.',
+        (value: any) => {
+          if (!value) return true;
+          return value.size <= FILE_SIZE_LIMIT;
+        }
+      ),
   });
 
   const methods = useForm<FieldValues>({
     defaultValues,
-    mode: 'onChange',
+    mode: 'onBlur',
     resolver: yupResolver(propertySchema),
   });
+
+  console.log(methods.formState.errors);
+
   const addImageField = () => {
     console.log('imagesLength', imageFields.length);
     const newIndex = `images[${imageFields.length}]`;
@@ -164,14 +237,25 @@ const PropertyForm = () => {
     });
   };
 
+  const handleArModelChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // setArModelFile(file);
+      methods.setValue('arModel', file);
+    }
+  };
   const propertySubmitHandler = async (data: any) => {
-    if (data.images.every((image) => image === '')) {
-      toast.error('No image uploaded');
-      return;
+    if (!update) {
+      if (data.images.every((image) => image === '')) {
+        toast.error('No image uploaded');
+        return;
+      }
     }
     try {
       const formData = new FormData();
       formData.append('title', data.title);
+      formData.append('category', data.category);
+      formData.append('type', data.type);
       formData.append('price', data.price);
       formData.append('bedrooms', data.bedrooms);
       formData.append('toilets', data.toilets);
@@ -183,16 +267,35 @@ const PropertyForm = () => {
       formData.append('houseNoStreet', data.houseNoStreet);
       formData.append('description', data.description);
 
-      data.images.forEach((image) => {
-        if (image) formData.append(`images`, image[0]);
-      });
-      const res = await apiV1.post('/properties', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      methods.reset(defaultValues);
-      toast.success('Property created successfully');
+      if (!update) {
+        data.images.forEach((image) => {
+          if (image) formData.append(`images`, image[0]);
+        });
+
+        if (data.arModel) {
+          formData.append('arModel', data.arModel);
+        }
+      }
+
+      let mode = 'post';
+      if (update) mode = 'put';
+      const res = await getApiV1Instance()[mode](
+        `/properties${update ? `/${propertyInfo.id}` : ''}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      if (!update) methods.reset(defaultValues);
+      toast.success(
+        `${
+          update
+            ? 'Property updated successfully'
+            : 'Property created successfully'
+        }`
+      );
     } catch (err) {
       console.log(err);
       const errors = err.response.data.errors;
@@ -223,7 +326,26 @@ const PropertyForm = () => {
             </div>
           </div>
 
-          <div className="row">
+          <div className="row align-items-start ">
+            <div className="col-lg-4 d-flex flex-column">
+              <HorizontalLabel label="Category" />
+              <Select control={methods.control} name="category">
+                <option value="">Choose category---</option>
+                {categories.map((category, index) => (
+                  <option value={category.id} key={index}>
+                    {category.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="col-lg-4 d-flex flex-column">
+              <HorizontalLabel label="Type" />
+              <Select control={methods.control} name="type">
+                <option value="">Choose type---</option>
+                <option value="To rent">To rent</option>
+                <option value="For sale">For sale</option>
+              </Select>
+            </div>
             <div className="col-lg-4 d-flex flex-column">
               <HorizontalLabel label="Price" />
               <Input
@@ -355,76 +477,101 @@ const PropertyForm = () => {
             </div>
           </div>
         </div>
-        <div className="col-lg-5">
-          <div className="my-2">
-            {imageFields.map((fieldName, index) => {
-              let indexPosition = String(fieldName).indexOf('[') + 1;
-              let errorIndex = String(fieldName).charAt(
-                String(fieldName).indexOf('[') + 1
-              );
+        {!update && (
+          <div className="col-lg-5">
+            <div className="my-2">
+              {imageFields.map((fieldName, index) => {
+                let indexPosition = String(fieldName).indexOf('[') + 1;
+                let errorIndex = String(fieldName).charAt(
+                  String(fieldName).indexOf('[') + 1
+                );
+                console.log(`imagePreview[${index}]`);
+                return (
+                  fieldName && (
+                    <div key={fieldName}>
+                      <label htmlFor="images" className="d-block fw-bold mb-2">
+                        Images:
+                      </label>
+                      {/* Display image preview */}
+                      {methods.watch(`imagePreview[${index}]`) && (
+                        <img
+                          className=" mt"
+                          style={{ maxHeight: '200px', objectFit: 'contain' }}
+                          src={methods.watch(`imagePreview[${index}]`)}
+                          alt={`Image Preview ${index}`}
+                        />
+                      )}
+                      <div className="d-flex my-2">
+                        <input
+                          type="file"
+                          multiple
+                          name={fieldName}
+                          {...methods.register(fieldName)}
+                          className="form-control flex-grow-1"
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
 
-              return (
-                fieldName && (
-                  <div key={fieldName}>
-                    <label htmlFor="images" className="d-block fw-bold mb-2">
-                      Images:
-                    </label>
-                    {/* Display image preview */}
-                    {methods.watch(`imagePreview[${index}]`) && (
-                      <img
-                        className=" mt"
-                        style={{ maxHeight: '200px', objectFit: 'contain' }}
-                        src={methods.watch(`imagePreview[${index}]`)}
-                        alt={`Image Preview ${index}`}
-                      />
-                    )}
-                    <div className="d-flex my-2">
-                      <input
-                        type="file"
-                        multiple
-                        name={fieldName}
-                        {...methods.register(fieldName)}
-                        className="form-control flex-grow-1"
-                        onChange={async (e) => {
-                          const file = e.target.files[0];
+                            // Get and set image preview
+                            const preview = await imagePreview(file);
+                            methods.setValue(`imagePreview[${index}]`, preview);
+                          }}
+                        />
+                        <button
+                          className="btn text-danger"
+                          type="button"
+                          onClick={() => removeImageField(index)}
+                        >
+                          <ClearIcon />
+                        </button>
+                      </div>
 
-                          // Get and set image preview
-                          const preview = await imagePreview(file);
-                          methods.setValue(`imagePreview[${index}]`, preview);
-                        }}
-                      />
-                      <button
-                        className="btn text-danger"
-                        type="button"
-                        onClick={() => removeImageField(index)}
-                      >
-                        <ClearIcon />
-                      </button>
+                      {methods.formState.errors['images'] &&
+                      methods.formState.errors['images'][errorIndex] ? (
+                        <p className="form-text text-danger p-0 m-0">
+                          {`${methods.formState.errors['images'][errorIndex]?.message}`}
+                        </p>
+                      ) : null}
                     </div>
+                  )
+                );
+              })}
+              <button
+                className="btn btn-secondary mt-2"
+                type="button"
+                onClick={addImageField}
+              >
+                Add Image
+              </button>
+            </div>
 
-                    {methods.formState.errors['images'] &&
-                    methods.formState.errors['images'][errorIndex] ? (
-                      <p className="form-text text-danger p-0 m-0">
-                        {`${methods.formState.errors['images'][errorIndex]?.message}`}
-                      </p>
-                    ) : null}
-                  </div>
-                )
-              );
-            })}
-            <button
-              className="btn btn-secondary mt-2"
-              type="button"
-              onClick={addImageField}
-            >
-              Add Image
-            </button>
+            <div className="form-group">
+              <label htmlFor="arModel">AR Model (GLTF/OBJ)</label>
+              <input
+                type="file"
+                id="arModel"
+                name="arModel"
+                accept=".gltf,.glb,.obj"
+                onChange={handleArModelChange}
+                className={`form-control ${
+                  methods.formState.errors.arModel ? 'is-invalid' : ''
+                }`}
+              />
+
+              {methods.formState.errors.arModel ? (
+                <p className="form-text text-danger p-0 m-0">
+                  {`${methods.formState.errors.arModel?.message}`}
+                </p>
+              ) : null}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="d-flex justify-content-end">
-        <SubmitButton label="Add Property" type="submit" />
+        <SubmitButton
+          label={!update ? 'Add Property' : 'Update Property'}
+          type="submit"
+        />
       </div>
     </form>
   );

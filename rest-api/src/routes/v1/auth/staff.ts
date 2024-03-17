@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { validateRequest } from '../../../common/middlewares/validate-request';
-import { body } from 'express-validator';
+import { FieldValidationError, body } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import { BadRequestError } from '../../../common/errors/bad-request-error';
 import { requireAuth } from '../../../common/middlewares/require-auth';
@@ -9,6 +9,7 @@ import { currentUser } from '../../../common/middlewares/current-user';
 import { PasswordManager } from '../../../services/password-manager';
 import { NotFoundError } from '../../../common/errors/not-found-error';
 import { Staff } from '../../../models/v1/staff';
+import { RequestValidationError } from '../../../common/errors/request-validation-error';
 
 const router = Router();
 
@@ -47,6 +48,15 @@ router.post(
       username,
       password,
     } = req.body;
+
+    const existingUsername = await Staff.findOne({ username });
+    if (existingUsername)
+      throw new RequestValidationError([
+        {
+          msg: 'username already exist',
+          path: 'username',
+        } as FieldValidationError,
+      ]);
 
     const staff = Staff.build({
       firstName,

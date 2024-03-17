@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  transpilePackages: ['three'],
   images: {
     domains: ['localhost', '172.20.10.4'],
   },

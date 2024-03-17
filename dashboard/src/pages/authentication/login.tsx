@@ -35,6 +35,7 @@ const Login = () => {
         headers: { Authorization: response.data.jwt },
       });
       Cookies.set('user', JSON.stringify(me.data));
+      Cookies.set('role', me.data.role);
 
       toast.success('login successful');
       router.push('/dashboard');
